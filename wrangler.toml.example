@@ -1,0 +1,28 @@
+name = "your-project-name"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[site]
+bucket = "./public"
+
+[vars]
+# Add your environment variables here
+# EXAMPLE_VAR = "example-value"
+
+[[kv_namespaces]]
+binding = "YOUR_KV_BINDING"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
+
+[[d1_databases]]
+binding = "YOUR_D1_BINDING"
+database_name = "your-database-name"
+database_id = "your-database-id"
+
+[env.production]
+workers_dev = true
+route = { pattern = "your-domain.com", zone_id = "your-zone-id" }
+
+[env.staging]
+workers_dev = true
+route = { pattern = "staging.your-domain.com", zone_id = "your-zone-id" } 
