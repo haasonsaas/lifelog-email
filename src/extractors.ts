@@ -5,7 +5,7 @@
 
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import type { Env, Lifelog } from "./types";
+import type { Env, Lifelog, LifelogContent } from "./types";
 
 const walk = (nodes: any[]): any[] =>
   nodes.flatMap((n) => [n, ...(n.children ? walk(n.children) : [])]);
@@ -240,7 +240,7 @@ export function conversation_topics(lifelogs: Lifelog[], env: Env): { html: stri
   const topics: { [key: string]: { duration: number; startTime: string; endTime: string } } = {};
   let currentTopic = "";
   let topicStartTime = "";
-  let lastBlockquoteTime = "";
+  let lastBlockquoteEndTime = "";
 
   console.log('Processing lifelogs:', lifelogs.length);
 
@@ -249,23 +249,24 @@ export function conversation_topics(lifelogs: Lifelog[], env: Env): { html: stri
     console.log('Processing log:', log.title);
     console.log('Contents length:', log.contents?.length);
     
-    for (const content of log.contents || []) {
+    // Process content in order, maintaining hierarchy
+    const processContent = (content: LifelogContent) => {
       console.log('Content type:', content.type);
       console.log('Content:', content.content);
       
-      if (content.type === "blockquote" && content.startTime) {
-        lastBlockquoteTime = content.startTime;
+      if (content.type === "blockquote" && content.endTime) {
+        lastBlockquoteEndTime = content.endTime;
       }
       
       if (content.type === "heading2") {
         // If we were tracking a previous topic, record its duration
-        if (currentTopic && topicStartTime && lastBlockquoteTime) {
+        if (currentTopic && topicStartTime && lastBlockquoteEndTime) {
           const start = new Date(topicStartTime);
-          const end = new Date(lastBlockquoteTime);
+          const end = new Date(lastBlockquoteEndTime);
           const duration = (end.getTime() - start.getTime()) / 1000 / 60; // duration in minutes
           
           if (!topics[currentTopic]) {
-            topics[currentTopic] = { duration: 0, startTime: topicStartTime, endTime: lastBlockquoteTime };
+            topics[currentTopic] = { duration: 0, startTime: topicStartTime, endTime: lastBlockquoteEndTime };
           }
           topics[currentTopic].duration += duration;
           console.log('Recorded topic:', currentTopic, 'duration:', duration);
@@ -273,20 +274,28 @@ export function conversation_topics(lifelogs: Lifelog[], env: Env): { html: stri
         
         // Start tracking new topic
         currentTopic = content.content;
-        topicStartTime = lastBlockquoteTime || log.startTime;
+        topicStartTime = lastBlockquoteEndTime || log.startTime;
         console.log('New topic:', currentTopic, 'start time:', topicStartTime);
       }
-    }
+
+      // Process children recursively
+      if (content.children && content.children.length > 0) {
+        content.children.forEach(processContent);
+      }
+    };
+
+    // Process each content item in the log
+    (log.contents || []).forEach(processContent);
   }
 
   // Handle the last topic if there is one
-  if (currentTopic && topicStartTime && lastBlockquoteTime) {
+  if (currentTopic && topicStartTime && lastBlockquoteEndTime) {
     const start = new Date(topicStartTime);
-    const end = new Date(lastBlockquoteTime);
+    const end = new Date(lastBlockquoteEndTime);
     const duration = (end.getTime() - start.getTime()) / 1000 / 60;
     
     if (!topics[currentTopic]) {
-      topics[currentTopic] = { duration: 0, startTime: topicStartTime, endTime: lastBlockquoteTime };
+      topics[currentTopic] = { duration: 0, startTime: topicStartTime, endTime: lastBlockquoteEndTime };
     }
     topics[currentTopic].duration += duration;
     console.log('Final topic:', currentTopic, 'duration:', duration);
