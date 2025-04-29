@@ -13,6 +13,6 @@
     "openai": "^4.96.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250428.0"
+    "@cloudflare/workers-types": "^4.20250429.0"
   }
 }

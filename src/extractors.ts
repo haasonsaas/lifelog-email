@@ -5,16 +5,7 @@
 
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import type { ExportedHandler } from "@cloudflare/workers-types";
-
-export interface Env {
-  TOKEN_KV: KVNamespace;
-  OPENAI_API_KEY: string;
-  TIMEZONE: string;
-  LIMITLESS_API_KEY: string;
-}
-
-type Lifelog = any;
+import type { Env, Lifelog } from "./types";
 
 const walk = (nodes: any[]): any[] =>
   nodes.flatMap((n) => [n, ...(n.children ? walk(n.children) : [])]);
@@ -32,7 +23,6 @@ export function decisions(lifelogs: Lifelog[], env: Env) {
     });
   }
 
-  // Get "yesterday" in proper timezone
   const timezone = env.TIMEZONE || "America/Los_Angeles";
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
   now.setDate(now.getDate() - 1);
@@ -41,10 +31,10 @@ export function decisions(lifelogs: Lifelog[], env: Env) {
   if (!bullets.length) {
     return {
       html: `
-        <p>Good morning Jonathan,</p>
-        <p>No major decisions recorded on ${dateStr}. Enjoy the day!</p>
+        <h2>Decisions</h2>
+        <p>No major decisions recorded on ${dateStr}.</p>
       `,
-      text: `Good morning Jonathan,\n\nNo major decisions recorded on ${dateStr}. Enjoy the day!`
+      text: `Decisions\n\nNo major decisions recorded on ${dateStr}.`
     };
   }
 
@@ -53,14 +43,14 @@ export function decisions(lifelogs: Lifelog[], env: Env) {
 
   return {
     html: `
-      <p>Good morning Jonathan,</p>
+      <h2>Decisions</h2>
       <p>Here's a summary of your decisions from <strong>${dateStr}</strong>:</p>
       <ul>
         ${listHtml}
       </ul>
-      <p>Stay decisive,<br>Your Limitless Digest 🪄</p>
+      <p>Stay decisive!</p>
     `,
-    text: `Good morning Jonathan,\n\nHere's a summary of your decisions from ${dateStr}:\n\n${listText}\n\nStay decisive,\nYour Limitless Digest 🪄`
+    text: `Decisions\n\nHere's a summary of your decisions from ${dateStr}:\n\n${listText}\n\nStay decisive!`
   };
 }
 
@@ -100,10 +90,10 @@ export async function new_contacts(
   if (!newbies.length) {
     return {
       html: `
-        <p>Good morning Jonathan,</p>
+        <h2>New Contacts</h2>
         <p>No new contacts recorded on ${dateStr}.</p>
       `,
-      text: `Good morning Jonathan,\n\nNo new contacts recorded on ${dateStr}.`
+      text: `New Contacts\n\nNo new contacts recorded on ${dateStr}.`
     };
   }
 
@@ -112,19 +102,19 @@ export async function new_contacts(
 
   return {
     html: `
-      <p>Good morning Jonathan,</p>
+      <h2>New Contacts</h2>
       <p>Here are the new contacts you met on <strong>${dateStr}</strong>:</p>
       <ul>
         ${listHtml}
       </ul>
-      <p>Keep connecting,<br>Your Limitless Digest 🪄</p>
+      <p>Keep connecting!</p>
     `,
-    text: `Good morning Jonathan,\n\nHere are the new contacts you met on ${dateStr}:\n\n${listText}\n\nKeep connecting,\nYour Limitless Digest 🪄`
+    text: `New Contacts\n\nHere are the new contacts you met on ${dateStr}:\n\n${listText}\n\nKeep connecting!`
   };
 }
 
 /* ---------- 3. Filler score extractor ---------- */
-export function filler_score(lifelogs: Lifelog[]): { html: string; text: string } {
+export function filler_score(lifelogs: Lifelog[], env: Env): { html: string; text: string } {
   const FILLER_RE = /\b(um|uh|erm|like|you know)\b/gi;
   let count = 0;
   let words = 0;
@@ -138,27 +128,27 @@ export function filler_score(lifelogs: Lifelog[]): { html: string; text: string 
   });
 
   const rate = words ? ((count / words) * 100).toFixed(2) : "0";
-  const timezone = "America/Los_Angeles";
+  const timezone = env.TIMEZONE || "America/Los_Angeles";
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
   now.setDate(now.getDate() - 1);
   const dateStr = now.toLocaleDateString("en-US", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
   return {
     html: `
-      <p>Good morning Jonathan,</p>
+      <h2>Speech Analysis</h2>
       <p>Here's your speech analysis from <strong>${dateStr}</strong>:</p>
       <ul>
         <li>Total fillers: <strong>${count}</strong></li>
         <li>Rate: <strong>${rate}%</strong> of words</li>
       </ul>
-      <p>Keep speaking clearly,<br>Your Limitless Digest 🪄</p>
+      <p>Keep speaking clearly!</p>
     `,
-    text: `Good morning Jonathan,\n\nHere's your speech analysis from ${dateStr}:\n\n- Total fillers: ${count}\n- Rate: ${rate}% of words\n\nKeep speaking clearly,\nYour Limitless Digest 🪄`
+    text: `Speech Analysis\n\nHere's your speech analysis from ${dateStr}:\n\n- Total fillers: ${count}\n- Rate: ${rate}% of words\n\nKeep speaking clearly!`
   };
 }
 
 /* ---------- 4. Action‑items extractor ---------- */
-export function action_items(lifelogs: Lifelog[]): { html: string; text: string } {
+export function action_items(lifelogs: Lifelog[], env: Env): { html: string; text: string } {
   const TODO_RE =
     /\b(?:I'll|I will|I'm going to|I'll make sure to)\s+([^.]{0,120})/i;
   const todos: string[] = [];
@@ -170,7 +160,7 @@ export function action_items(lifelogs: Lifelog[]): { html: string; text: string 
     }
   });
 
-  const timezone = "America/Los_Angeles";
+  const timezone = env.TIMEZONE || "America/Los_Angeles";
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
   now.setDate(now.getDate() - 1);
   const dateStr = now.toLocaleDateString("en-US", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -178,10 +168,10 @@ export function action_items(lifelogs: Lifelog[]): { html: string; text: string 
   if (!todos.length) {
     return {
       html: `
-        <p>Good morning Jonathan,</p>
+        <h2>Action Items</h2>
         <p>No commitments detected on ${dateStr}.</p>
       `,
-      text: `Good morning Jonathan,\n\nNo commitments detected on ${dateStr}.`
+      text: `Action Items\n\nNo commitments detected on ${dateStr}.`
     };
   }
 
@@ -190,14 +180,14 @@ export function action_items(lifelogs: Lifelog[]): { html: string; text: string 
 
   return {
     html: `
-      <p>Good morning Jonathan,</p>
+      <h2>Action Items</h2>
       <p>Here are your commitments from <strong>${dateStr}</strong>:</p>
       <ul>
         ${listHtml}
       </ul>
-      <p>Stay accountable,<br>Your Limitless Digest 🪄</p>
+      <p>Stay accountable!</p>
     `,
-    text: `Good morning Jonathan,\n\nHere are your commitments from ${dateStr}:\n\n${listText}\n\nStay accountable,\nYour Limitless Digest 🪄`
+    text: `Action Items\n\nHere are your commitments from ${dateStr}:\n\n${listText}\n\nStay accountable!`
   };
 }
 
