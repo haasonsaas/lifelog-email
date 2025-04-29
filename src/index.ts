@@ -41,7 +41,7 @@ async function runDigest(env: Env) {
 
 async function extractDigest(lifelogs: any[], env: Env) {
   // Define the extractors we want to use (excluding gpt_summary)
-  const extractorNames = ['decisions', 'new_contacts', 'filler_score', 'action_items'] as const;
+  const extractorNames = ['decisions', 'new_contacts', 'filler_score', 'action_items', 'conversation_topics'] as const;
   
   // Run all extractors in parallel
   const results = await Promise.all(

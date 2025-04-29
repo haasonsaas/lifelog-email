@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "Sends your daily Limitless lifelog digest via Resend—a modern email API for developers.",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "bun run src/test.ts"
   },
   "keywords": [],
   "author": "",

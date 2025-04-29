@@ -234,3 +234,101 @@ export async function gpt_summary(lifelogs: Lifelog[], env: Env): Promise<{ html
     text: `Good morning Jonathan,\n\nHere's a summary of your conversations from ${dateStr}:\n\n${summary}\n\nStay informed,\nYour Limitless Digest 🪄`
   };
 }
+
+/* ---------- 6. Conversation Topics extractor ---------- */
+export function conversation_topics(lifelogs: Lifelog[], env: Env): { html: string; text: string } {
+  const topics: { [key: string]: { duration: number; startTime: string; endTime: string } } = {};
+  let currentTopic = "";
+  let topicStartTime = "";
+  let lastBlockquoteTime = "";
+
+  console.log('Processing lifelogs:', lifelogs.length);
+
+  // Process each lifelog's contents
+  for (const log of lifelogs) {
+    console.log('Processing log:', log.title);
+    console.log('Contents length:', log.contents?.length);
+    
+    for (const content of log.contents || []) {
+      console.log('Content type:', content.type);
+      console.log('Content:', content.content);
+      
+      if (content.type === "blockquote" && content.startTime) {
+        lastBlockquoteTime = content.startTime;
+      }
+      
+      if (content.type === "heading2") {
+        // If we were tracking a previous topic, record its duration
+        if (currentTopic && topicStartTime && lastBlockquoteTime) {
+          const start = new Date(topicStartTime);
+          const end = new Date(lastBlockquoteTime);
+          const duration = (end.getTime() - start.getTime()) / 1000 / 60; // duration in minutes
+          
+          if (!topics[currentTopic]) {
+            topics[currentTopic] = { duration: 0, startTime: topicStartTime, endTime: lastBlockquoteTime };
+          }
+          topics[currentTopic].duration += duration;
+          console.log('Recorded topic:', currentTopic, 'duration:', duration);
+        }
+        
+        // Start tracking new topic
+        currentTopic = content.content;
+        topicStartTime = lastBlockquoteTime || log.startTime;
+        console.log('New topic:', currentTopic, 'start time:', topicStartTime);
+      }
+    }
+  }
+
+  // Handle the last topic if there is one
+  if (currentTopic && topicStartTime && lastBlockquoteTime) {
+    const start = new Date(topicStartTime);
+    const end = new Date(lastBlockquoteTime);
+    const duration = (end.getTime() - start.getTime()) / 1000 / 60;
+    
+    if (!topics[currentTopic]) {
+      topics[currentTopic] = { duration: 0, startTime: topicStartTime, endTime: lastBlockquoteTime };
+    }
+    topics[currentTopic].duration += duration;
+    console.log('Final topic:', currentTopic, 'duration:', duration);
+  }
+
+  console.log('Found topics:', Object.keys(topics));
+
+  const timezone = env.TIMEZONE || "America/Los_Angeles";
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
+  now.setDate(now.getDate() - 1);
+  const dateStr = now.toLocaleDateString("en-US", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  if (Object.keys(topics).length === 0) {
+    return {
+      html: `
+        <h2>Conversation Topics</h2>
+        <p>No topics recorded on ${dateStr}.</p>
+      `,
+      text: `Conversation Topics\n\nNo topics recorded on ${dateStr}.`
+    };
+  }
+
+  // Sort topics by duration (longest first)
+  const sortedTopics = Object.entries(topics).sort((a, b) => b[1].duration - a[1].duration);
+
+  const listHtml = sortedTopics.map(([topic, data]) => 
+    `<li><strong>${topic}</strong> (${data.duration.toFixed(1)} minutes)</li>`
+  ).join("\n");
+
+  const listText = sortedTopics.map(([topic, data]) => 
+    `- ${topic} (${data.duration.toFixed(1)} minutes)`
+  ).join("\n");
+
+  return {
+    html: `
+      <h2>Conversation Topics</h2>
+      <p>Here's how your time was spent in conversations on <strong>${dateStr}</strong>:</p>
+      <ul>
+        ${listHtml}
+      </ul>
+      <p>Stay engaged!</p>
+    `,
+    text: `Conversation Topics\n\nHere's how your time was spent in conversations on ${dateStr}:\n\n${listText}\n\nStay engaged!`
+  };
+}

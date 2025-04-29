@@ -1,4 +1,4 @@
-import type { Env } from "./extractors";
+import type { Env } from "./types";
 
 export function yesterday(tz: string) {
   const now = new Date();
@@ -20,7 +20,6 @@ export async function fetchLifelogs(start: string, end: string, env: Env) {
   console.log('Making request to:', url.toString());
   console.log('API Key present:', !!env.LIMITLESS_API_KEY);
   console.log('API Key length:', env.LIMITLESS_API_KEY?.length);
-  console.log('API Key header:', env.LIMITLESS_API_KEY);
 
   const res = await fetch(url.toString(), {
     headers: { 
@@ -34,5 +33,6 @@ export async function fetchLifelogs(start: string, end: string, env: Env) {
     throw new Error(`Limitless API ${res.status}: ${errorText}`);
   }
   const json = await res.json() as { data: { lifelogs: any[] } };
+  console.log('API Response:', JSON.stringify(json, null, 2));
   return json.data.lifelogs;
 }
