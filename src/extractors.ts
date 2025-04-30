@@ -195,6 +195,7 @@ export function action_items(lifelogs: Lifelog[], env: Env): { html: string; tex
 export async function gpt_summary(lifelogs: Lifelog[], env: Env): Promise<{ html: string; text: string }> {
   const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
+  // Get all the content for GPT to analyze
   const chunks = lifelogs
     .flatMap((l) => l.contents || [])
     .filter((n) => n.content)
@@ -205,8 +206,14 @@ export async function gpt_summary(lifelogs: Lifelog[], env: Env): Promise<{ html
   const messages: ChatCompletionMessageParam[] = [
     {
       role: "system",
-      content:
-        "You are an expert conversation summarizer. Produce a concise bullet list of key takeaways from yesterday's discussions.",
+      content: `You are an expert conversation summarizer. Create a concise daily digest that includes:
+1. A brief 2-3 sentence overview of the day's key activities
+2. Important decisions made
+3. Key action items/commitments
+4. Notable new contacts (if any)
+5. Main conversation topics with approximate time spent
+
+Keep each section very brief and focus on the most important information. Format the output in a clean, scannable way.`,
     },
     { role: "user", content: chunks },
   ];
@@ -214,7 +221,7 @@ export async function gpt_summary(lifelogs: Lifelog[], env: Env): Promise<{ html
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages,
-    max_tokens: 256,
+    max_tokens: 512,
     temperature: 0.3,
   });
 
@@ -227,11 +234,11 @@ export async function gpt_summary(lifelogs: Lifelog[], env: Env): Promise<{ html
   return {
     html: `
       <p>Good morning Jonathan,</p>
-      <p>Here's a summary of your conversations from <strong>${dateStr}</strong>:</p>
-      <div style="white-space: pre-wrap;">${summary}</div>
+      <p>Here's your daily digest for <strong>${dateStr}</strong>:</p>
+      <div style="white-space: pre-wrap; font-family: monospace; line-height: 1.5;">${summary}</div>
       <p>Stay informed,<br>Your Limitless Digest 🪄</p>
     `,
-    text: `Good morning Jonathan,\n\nHere's a summary of your conversations from ${dateStr}:\n\n${summary}\n\nStay informed,\nYour Limitless Digest 🪄`
+    text: `Good morning Jonathan,\n\nHere's your daily digest for ${dateStr}:\n\n${summary}\n\nStay informed,\nYour Limitless Digest 🪄`
   };
 }
 

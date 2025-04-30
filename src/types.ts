@@ -32,11 +32,11 @@ export type Lifelog = LifelogEntry & {
 export type LifelogContent = {
   type: "heading1" | "heading2" | "blockquote";
   content: string;
-  startTime: string;
-  endTime: string;
-  startOffsetMs: number;
-  endOffsetMs: number;
-  children: LifelogContent[];
+  startTime?: string;
+  endTime?: string;
+  startOffsetMs?: number;
+  endOffsetMs?: number;
+  children?: LifelogContent[];
   speakerName?: string;
   speakerIdentifier?: "user" | null;
 }; 
