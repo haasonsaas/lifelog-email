@@ -21,7 +21,26 @@ interface LifelogsResponse {
   };
 }
 
-export async function fetchLifelogs(apiKey: string, startDate: string, endDate: string): Promise<LifelogEntry[]> {
+interface ApiError {
+  error: {
+    message: string;
+    code: string;
+  };
+}
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export async function fetchLifelogs(
+  apiKey: string, 
+  startDate: string, 
+  endDate: string,
+  cursor?: string
+): Promise<LifelogEntry[]> {
   const url = new URL('https://api.limitless.ai/v1/lifelogs');
   
   // Convert dates to YYYY-MM-DD format if they include time
@@ -35,23 +54,58 @@ export async function fetchLifelogs(apiKey: string, startDate: string, endDate: 
   url.searchParams.append('includeHeadings', 'true');
   url.searchParams.append('limit', '10');
   url.searchParams.append('direction', 'desc');
+  
+  if (cursor) {
+    url.searchParams.append('cursor', cursor);
+  }
 
   console.log('Fetching lifelogs from:', url.toString());
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      'X-API-Key': apiKey,
-      'Content-Type': 'application/json'
-    }
-  });
+  let retries = 0;
+  while (retries < MAX_RETRIES) {
+    try {
+      const response = await fetch(url.toString(), {
+        headers: {
+          'X-API-Key': apiKey,
+          'Content-Type': 'application/json'
+        }
+      });
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch lifelogs: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        const errorData = await response.json() as ApiError;
+        if (response.status === 429) {
+          // Rate limit exceeded
+          const retryAfter = response.headers.get('Retry-After');
+          const delay = retryAfter ? parseInt(retryAfter) * 1000 : RETRY_DELAY_MS;
+          console.log(`Rate limit exceeded, retrying after ${delay}ms`);
+          await sleep(delay);
+          retries++;
+          continue;
+        }
+        throw new Error(`API Error: ${errorData.error.message} (${errorData.error.code})`);
+      }
+
+      const data = await response.json() as LifelogsResponse;
+      console.log('Received lifelogs:', data.data.lifelogs.length);
+
+      // If there are more pages and we haven't hit the limit, fetch them
+      if (data.meta.lifelogs.nextCursor && data.data.lifelogs.length < 100) {
+        const nextPage = await fetchLifelogs(apiKey, startDate, endDate, data.meta.lifelogs.nextCursor);
+        return [...data.data.lifelogs, ...nextPage];
+      }
+
+      return data.data.lifelogs;
+    } catch (error) {
+      if (retries === MAX_RETRIES - 1) {
+        throw error;
+      }
+      console.log(`Request failed, retrying (${retries + 1}/${MAX_RETRIES})`);
+      await sleep(RETRY_DELAY_MS * Math.pow(2, retries)); // Exponential backoff
+      retries++;
+    }
   }
 
-  const data = await response.json() as LifelogsResponse;
-  console.log('Received lifelogs:', data.data.lifelogs.length);
-  return data.data.lifelogs;
+  throw new Error('Failed to fetch lifelogs after maximum retries');
 }
 
 export interface LifelogEntry {
