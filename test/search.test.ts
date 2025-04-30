@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { searchLifelogs } from '../src/utils';
+import { searchLifelogs, formatLifelogEntry } from '../src/utils';
 import type { LifelogEntry } from '../src/types';
 
 describe('Search Functionality', () => {
@@ -15,6 +15,8 @@ describe('Search Functionality', () => {
           content: 'Project Discussion',
           startTime: '2024-03-20T10:00:00Z',
           endTime: '2024-03-20T10:30:00Z',
+          speakerName: undefined,
+          speakerIdentifier: undefined
         },
         {
           type: 'blockquote',
@@ -22,6 +24,7 @@ describe('Search Functionality', () => {
           startTime: '2024-03-20T10:15:00Z',
           endTime: '2024-03-20T10:16:00Z',
           speakerName: 'John',
+          speakerIdentifier: undefined
         }
       ]
     },
@@ -37,6 +40,7 @@ describe('Search Functionality', () => {
           startTime: '2024-03-20T14:00:00Z',
           endTime: '2024-03-20T14:01:00Z',
           speakerName: 'Alice',
+          speakerIdentifier: undefined
         }
       ]
     }
@@ -83,5 +87,31 @@ describe('Search Functionality', () => {
   test('should return empty array when no matches', () => {
     const results = searchLifelogs(sampleLogs, { query: 'nonexistent' });
     expect(results.length).toBe(0);
+  });
+
+  test('should format lifelog entry as markdown', () => {
+    const entry = sampleLogs[0];
+    const formatted = formatLifelogEntry(entry);
+    
+    // Check for expected markdown structure
+    expect(formatted).toContain('# ' + entry.title);
+    expect(formatted).toContain('Time: ');
+    expect(formatted).toContain('## Project Discussion');
+    expect(formatted).toContain('> John (');
+    expect(formatted).toContain('): We need to focus on the deadline');
+  });
+
+  test('should handle entries with no contents', () => {
+    const emptyEntry: LifelogEntry = {
+      id: '3',
+      title: 'Empty Meeting',
+      startTime: '2024-03-20T16:00:00Z',
+      endTime: '2024-03-20T17:00:00Z',
+      contents: []
+    };
+    
+    const formatted = formatLifelogEntry(emptyEntry);
+    expect(formatted).toContain('# ' + emptyEntry.title);
+    expect(formatted).toContain('Time: ');
   });
 }); 
