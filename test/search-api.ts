@@ -12,8 +12,9 @@ async function testSearchAPI() {
     });
     console.log('Status:', response.status);
     const html = await response.text();
-    console.log('Response contains markdown:', html.includes('# '));
-    console.log('Response contains results:', html.includes('Search Results'));
+    console.log('Response is HTML:', html.includes('<html>') && html.includes('</html>'));
+    console.log('Has search results header:', html.includes('<h1>Search Results</h1>'));
+    console.log('Has styling:', html.includes('<style>'));
   } catch (error) {
     console.error('Error:', error);
   }
@@ -28,8 +29,9 @@ async function testSearchAPI() {
     });
     console.log('Status:', response.status);
     const html = await response.text();
-    console.log('Response contains markdown:', html.includes('# '));
-    console.log('Response contains results:', html.includes('Search Results'));
+    console.log('Response is HTML:', html.includes('<html>') && html.includes('</html>'));
+    console.log('Has search results header:', html.includes('<h1>Search Results</h1>'));
+    console.log('Has styling:', html.includes('<style>'));
   } catch (error) {
     console.error('Error:', error);
   }
@@ -44,8 +46,9 @@ async function testSearchAPI() {
     });
     console.log('Status:', response.status);
     const html = await response.text();
-    console.log('Response contains markdown:', html.includes('# '));
-    console.log('Response contains results:', html.includes('Search Results'));
+    console.log('Response is HTML:', html.includes('<html>') && html.includes('</html>'));
+    console.log('Has search results header:', html.includes('<h1>Search Results</h1>'));
+    console.log('Has styling:', html.includes('<style>'));
   } catch (error) {
     console.error('Error:', error);
   }
@@ -65,8 +68,9 @@ async function testSearchAPI() {
     });
     console.log('Status:', response.status);
     const html = await response.text();
-    console.log('Response contains markdown:', html.includes('# '));
-    console.log('Response contains results:', html.includes('Search Results'));
+    console.log('Response is HTML:', html.includes('<html>') && html.includes('</html>'));
+    console.log('Has search results header:', html.includes('<h1>Search Results</h1>'));
+    console.log('Has styling:', html.includes('<style>'));
   } catch (error) {
     console.error('Error:', error);
   }
@@ -76,21 +80,27 @@ async function testSearchAPI() {
   try {
     const response = await fetch(`${baseUrl}/search`);
     console.log('Status:', response.status);
-    console.log('Response:', await response.text());
+    const text = await response.text();
+    console.log('Response:', text);
+    console.log('Has correct error message:', text === 'Method not allowed');
   } catch (error) {
     console.error('Error:', error);
   }
 
-  // Test 6: Missing API key error
-  console.log('\nTest 6: Missing API key error');
+  // Test 6: Empty search results
+  console.log('\nTest 6: Empty search results');
   try {
     const response = await fetch(`${baseUrl}/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'test' })
+      body: JSON.stringify({ query: 'nonexistent_term_that_wont_match' })
     });
     console.log('Status:', response.status);
-    console.log('Response:', await response.text());
+    const html = await response.text();
+    console.log('Response is HTML:', html.includes('<html>') && html.includes('</html>'));
+    console.log('Has search results header:', html.includes('<h1>Search Results</h1>'));
+    console.log('Has styling:', html.includes('<style>'));
+    console.log('Has empty results:', !html.includes('<div class="result">'));
   } catch (error) {
     console.error('Error:', error);
   }
