@@ -23,12 +23,18 @@ interface LifelogsResponse {
 
 export async function fetchLifelogs(apiKey: string, startDate: string, endDate: string): Promise<LifelogEntry[]> {
   const url = new URL('https://api.limitless.ai/v1/lifelogs');
-  url.searchParams.append('start', startDate);
-  url.searchParams.append('end', endDate);
+  
+  // Convert dates to YYYY-MM-DD format if they include time
+  const start = startDate.split(' ')[0];
+  const end = endDate.split(' ')[0];
+  
+  url.searchParams.append('start', start);
+  url.searchParams.append('end', end);
   url.searchParams.append('timezone', 'America/Los_Angeles');
   url.searchParams.append('includeMarkdown', 'true');
   url.searchParams.append('includeHeadings', 'true');
-  url.searchParams.append('limit', '100');
+  url.searchParams.append('limit', '10');
+  url.searchParams.append('direction', 'desc');
 
   console.log('Fetching lifelogs from:', url.toString());
 
