@@ -1,157 +1,155 @@
-import * as X from "./extractors";
-import { fetchLifelogs, yesterday } from "./utils";
+import { yesterday, fetchLifelogs, searchLifelogs, formatLifelogEntry } from './utils';
+import { decisions, new_contacts, filler_score, action_items, gpt_summary, conversation_topics } from './extractors';
+import type { Env, Lifelog } from './types';
 import type { ScheduledEvent, ExecutionContext } from "@cloudflare/workers-types";
-import type { Env } from "./types";
 
-export default {
-  async scheduled(_: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runDigest(env));
-  },
-
-  async fetch(req: Request, env: Env) {
-    const { pathname } = new URL(req.url);
-    if (pathname === "/preview") {
-      const { start, end } = yesterday(env.TIMEZONE || "America/Los_Angeles");
-      const logs = await fetchLifelogs(start, end, env);
-      const { html } = await extractDigest(logs, env);
-      return new Response(html, { headers: { "content-type": "text/html" } });
-    }
-    if (pathname === "/test") {
-      try {
-        const { start, end } = yesterday(env.TIMEZONE || "America/Los_Angeles");
-        const logs = await fetchLifelogs(start, end, env);
-        const { subject, text, html } = await extractDigest(logs, env);
-        await sendViaResend(env, subject, text, html);
-        return new Response("Test email sent!");
-      } catch (error: any) {
-        console.error("Test endpoint error:", error);
-        return new Response(`Error: ${error.message}`, { status: 500 });
-      }
-    }
-    return new Response("OK");
-  },
-};
-
-async function runDigest(env: Env) {
-  const { start, end } = yesterday(env.TIMEZONE || "America/Los_Angeles");
-  const logs = await fetchLifelogs(start, end, env);
-  const { subject, text, html } = await extractDigest(logs, env);
-  await sendViaResend(env, subject, text, html);
+interface SearchOptions {
+  query?: string;
+  topics?: string[];
+  speakers?: string[];
+  startDate?: string;
+  endDate?: string;
 }
 
-async function extractDigest(lifelogs: any[], env: Env) {
-  // Define the extractors we want to use (excluding gpt_summary)
-  const extractorNames = ['decisions', 'new_contacts', 'filler_score', 'action_items', 'conversation_topics'] as const;
+async function runDigest(env: Env): Promise<void> {
+  const { start, end } = yesterday(env.TIMEZONE);
+  const lifelogs = await fetchLifelogs(env.LIMITLESS_API_KEY, start, end);
   
-  // Run all extractors in parallel
+  // Convert LifelogEntry to Lifelog by adding markdown field
+  const logsWithMarkdown: Lifelog[] = lifelogs.map(log => ({
+    ...log,
+    markdown: formatLifelogEntry(log)
+  }));
+  
+  const extractors = [
+    decisions,
+    new_contacts,
+    filler_score,
+    action_items,
+    gpt_summary,
+    conversation_topics
+  ];
+
   const results = await Promise.all(
-    extractorNames.map(async (name) => {
-      console.log("Running extractor:", name);
-      const fn = X[name];
-      if (!fn) throw new Error("Unknown extractor " + name);
-      return fn(lifelogs, env);
-    })
+    extractors.map(extractor => extractor(logsWithMarkdown, env))
   );
 
-  // Combine all results
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: env.TIMEZONE || "America/Los_Angeles" }));
-  now.setDate(now.getDate() - 1);
-  const dateStr = now.toLocaleDateString("en-US", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const html = results.map(r => r.html).join('\n');
+  const text = results.map(r => r.text).join('\n\n');
 
-  // Combine HTML and text content
-  const combinedHtml = results.map(r => r.html).join('\n<hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">\n');
-  const combinedText = results.map(r => r.text).join('\n\n---\n\n');
-
-  return {
-    subject: `Your Daily Digest for ${dateStr}`,
-    text: combinedText,
-    html: wrapHtml(combinedHtml),
-  };
-}
-
-async function sendViaResend(env: Env, subject: string, text: string, html: string) {
-  const payload = {
-    from: env.FROM_EMAIL,
-    to: env.TO_EMAIL,
-    subject,
-    text,
-    html,
-  };
-
-  const res = await fetch('https://api.resend.com/emails', {
+  await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${env.RESEND_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      from: env.FROM_EMAIL,
+      to: env.TO_EMAIL,
+      subject: `Lifelog Digest for ${new Date().toLocaleDateString()}`,
+      html,
+      text,
+    }),
   });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error("Resend error " + res.status + ": " + text);
-  }
 }
 
-function wrapHtml(innerHtml: string): string {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Daily Digest</title>
-      <style>
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-          line-height: 1.6;
-          color: #333;
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 20px;
+export default {
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    await runDigest(env);
+  },
+
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    if (path === "/preview") {
+      const { start, end } = yesterday(env.TIMEZONE);
+      const lifelogs = await fetchLifelogs(env.LIMITLESS_API_KEY, start, end);
+      const logsWithMarkdown: Lifelog[] = lifelogs.map(log => ({
+        ...log,
+        markdown: formatLifelogEntry(log)
+      }));
+      const results = await Promise.all([
+        decisions(logsWithMarkdown, env),
+        new_contacts(logsWithMarkdown, env),
+        filler_score(logsWithMarkdown, env),
+        action_items(logsWithMarkdown, env),
+        gpt_summary(logsWithMarkdown, env),
+        conversation_topics(logsWithMarkdown, env)
+      ]);
+      const html = results.map(r => r.html).join('\n');
+      return new Response(html, { headers: { "Content-Type": "text/html" } });
+    }
+
+    if (path === "/test") {
+      await runDigest(env);
+      return new Response("Test email sent!");
+    }
+
+    if (path === "/search") {
+      if (request.method !== "POST") {
+        return new Response("Method not allowed", { status: 405 });
+      }
+
+      try {
+        if (!env.LIMITLESS_API_KEY) {
+          return new Response("API key not configured", { status: 500 });
         }
-        h1 {
-          color: #2c3e50;
-          border-bottom: 2px solid #eee;
-          padding-bottom: 10px;
-          margin-bottom: 20px;
-        }
-        h2 {
-          color: #34495e;
-          margin-top: 30px;
-        }
-        ul {
-          padding-left: 20px;
-        }
-        li {
-          margin-bottom: 8px;
-        }
-        hr {
-          margin: 30px 0;
-          border: 0;
-          border-top: 1px solid #eee;
-        }
-        .header {
-          text-align: center;
-          margin-bottom: 30px;
-        }
-        .footer {
-          text-align: center;
-          margin-top: 30px;
-          padding-top: 20px;
-          border-top: 2px solid #eee;
-          color: #666;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>Your Daily Digest</h1>
-      </div>
-      ${innerHtml}
-      <div class="footer">
-        <p>Generated by Limitless Digest 🪄</p>
-      </div>
-    </body>
-    </html>
-  `;
-}
+
+        const searchOptions = await request.json() as SearchOptions;
+        console.log('Search options:', searchOptions);
+        
+        // Use the last 24 hours as default range if not specified
+        const end = new Date();
+        const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+        const startDate = searchOptions.startDate || start.toISOString().replace('T', ' ').slice(0, 19);
+        const endDate = searchOptions.endDate || end.toISOString().replace('T', ' ').slice(0, 19);
+        
+        console.log('Fetching lifelogs with date range:', { startDate, endDate });
+
+        const lifelogs = await fetchLifelogs(env.LIMITLESS_API_KEY, startDate, endDate);
+        
+        console.log(`Found ${lifelogs.length} lifelogs`);
+        
+        const searchResults = searchLifelogs(lifelogs, searchOptions);
+        
+        console.log(`Found ${searchResults.length} matching results`);
+        
+        // Format the search results
+        const formattedResults = searchResults.map(entry => formatLifelogEntry(entry));
+        const html = `
+          <html>
+            <head>
+              <style>
+                body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+                .result { margin-bottom: 20px; padding: 10px; border: 1px solid #eee; }
+                .title { font-size: 1.2em; font-weight: bold; }
+                .time { color: #666; font-size: 0.9em; }
+                .content { margin-top: 10px; }
+              </style>
+            </head>
+            <body>
+              <h1>Search Results</h1>
+              ${formattedResults.map(result => `
+                <div class="result">
+                  <div class="title">${result.split('\n')[0].replace('# ', '')}</div>
+                  <div class="time">${result.split('\n')[1].replace('Time: ', '')}</div>
+                  <div class="content">${result.split('\n').slice(2).join('\n')}</div>
+                </div>
+              `).join('\n')}
+            </body>
+          </html>
+        `;
+        
+        return new Response(html, {
+          headers: { 'Content-Type': 'text/html' }
+        });
+      } catch (error) {
+        console.error('Error processing search:', error);
+        return new Response(`Error processing search: ${error}`, { status: 500 });
+      }
+    }
+
+    return new Response("Not found", { status: 404 });
+  },
+};

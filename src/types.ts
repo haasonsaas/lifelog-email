@@ -10,13 +10,23 @@ export interface Env {
   RESEND_API_KEY: string;
 }
 
-export type Lifelog = {
+export interface LifelogEntry {
   id: string;
   title: string;
-  markdown: string;
   startTime: string;
   endTime: string;
-  contents: LifelogContent[];
+  contents: Array<{
+    content: string;
+    type: string;
+    startTime?: string;
+    endTime?: string;
+    speakerName?: string;
+    speakerIdentifier?: string;
+  }>;
+}
+
+export type Lifelog = LifelogEntry & {
+  markdown: string;
 };
 
 export type LifelogContent = {
