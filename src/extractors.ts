@@ -36,7 +36,31 @@ export function decisions(lifelogs: Lifelog[], env: Env) {
     /\b(we|I)\s+will\s+go\s+with\b/i,
     /\b(we|I)\s+will\s+proceed\s+with\b/i,
     /\b(we|I)\s+will\s+take\s+the\s+path\b/i,
-    /\b(we|I)\s+will\s+follow\s+the\s+approach\b/i
+    /\b(we|I)\s+will\s+follow\s+the\s+approach\b/i,
+    /\b(?:I'm|I am|I'll|I will)\s+going\s+to\s+(?:take|capture|record|add)\s+(?:that|this|it)\s+as\s+(?:an|a)\s+(?:action\s+)?item\b/i,
+    /\b(we|I)\s+made\s+the\s+call\b/i,
+    /\b(we|I)\s+made\s+a\s+decision\b/i,
+    /\b(we|I)\s+reached\s+a\s+decision\b/i,
+    /\b(we|I)\s+came\s+to\s+a\s+decision\b/i,
+    /\b(we|I)\s+arrived\s+at\s+a\s+decision\b/i,
+    /\b(we|I)\s+made\s+up\s+our\s+mind\b/i,
+    /\b(we|I)\s+made\s+my\s+mind\s+up\b/i,
+    /\b(we|I)\s+have\s+decided\b/i,
+    /\b(we|I)\s+have\s+chosen\b/i,
+    /\b(we|I)\s+have\s+selected\b/i,
+    /\b(we|I)\s+have\s+agreed\b/i,
+    /\b(we|I)\s+have\s+settled\b/i,
+    /\b(we|I)\s+have\s+determined\b/i,
+    /\b(we|I)\s+have\s+resolved\b/i,
+    /\b(we|I)\s+have\s+concluded\b/i,
+    /\b(we|I)\s+have\s+opted\b/i,
+    /\b(we|I)\s+have\s+made\s+the\s+call\b/i,
+    /\b(we|I)\s+have\s+made\s+a\s+decision\b/i,
+    /\b(we|I)\s+have\s+reached\s+a\s+decision\b/i,
+    /\b(we|I)\s+have\s+come\s+to\s+a\s+decision\b/i,
+    /\b(we|I)\s+have\s+arrived\s+at\s+a\s+decision\b/i,
+    /\b(we|I)\s+have\s+made\s+up\s+our\s+mind\b/i,
+    /\b(we|I)\s+have\s+made\s+my\s+mind\s+up\b/i
   ];
 
   const decisions: Array<{
