@@ -7,20 +7,101 @@ import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import type { Env, Lifelog, LifelogContent } from "./types";
 
-const walk = (nodes: any[]): any[] =>
+type ContentNode = {
+  content?: string;
+  startTime?: string;
+  endTime?: string;
+  children?: ContentNode[];
+  type?: string;
+  speakerName?: string;
+  speakerIdentifier?: string;
+};
+
+const walk = (nodes: ContentNode[]): ContentNode[] =>
   nodes.flatMap((n) => [n, ...(n.children ? walk(n.children) : [])]);
 
 /* ---------- 1. Decisions extractor (EMAIL READY VERSION) ---------- */
 export function decisions(lifelogs: Lifelog[], env: Env) {
-  const DECISION_RE = /\b(we|I)\s+decided\s+to\b/i;
-  const bullets: string[] = [];
+  // Expanded decision patterns
+  const DECISION_PATTERNS = [
+    /\b(we|I)\s+decided\s+to\b/i,
+    /\b(we|I)\s+chose\s+to\b/i,
+    /\b(we|I)\s+opted\s+for\b/i,
+    /\b(we|I)\s+selected\b/i,
+    /\b(we|I)\s+agreed\s+to\b/i,
+    /\b(we|I)\s+settled\s+on\b/i,
+    /\b(we|I)\s+concluded\s+to\b/i,
+    /\b(we|I)\s+resolved\s+to\b/i,
+    /\b(we|I)\s+determined\s+to\b/i,
+    /\b(we|I)\s+will\s+go\s+with\b/i,
+    /\b(we|I)\s+will\s+proceed\s+with\b/i,
+    /\b(we|I)\s+will\s+take\s+the\s+path\b/i,
+    /\b(we|I)\s+will\s+follow\s+the\s+approach\b/i
+  ];
+
+  const decisions: Array<{
+    content: string;
+    context: string[];
+    timestamp: string;
+  }> = [];
 
   for (const log of lifelogs) {
-    walk(log.contents || []).forEach((n: any) => {
-      if (n.content && DECISION_RE.test(n.content)) {
-        bullets.push(n.content.trim());
+    let currentContext: string[] = [];
+    let lastDecisionTime = "";
+
+    // Get all content nodes in order
+    const nodes = walk((log.contents as unknown as ContentNode[]) || []);
+    
+    for (const node of nodes) {
+      if (node.content) {
+        const text = node.content.trim();
+        const timestamp = node.startTime || log.startTime;
+
+        // Check if this content matches any decision pattern
+        const isDecision = DECISION_PATTERNS.some(pattern => pattern.test(text));
+        
+        if (isDecision) {
+          // If we have a previous decision, save it with its context
+          if (lastDecisionTime) {
+            decisions.push({
+              content: currentContext[0], // The decision is always first in context
+              context: currentContext.slice(1), // Rest is supporting context
+              timestamp: lastDecisionTime
+            });
+          }
+          
+          // Start new context with this decision
+          currentContext = [text];
+          lastDecisionTime = timestamp;
+        } else if (lastDecisionTime) {
+          // Add to context if it's within 2 minutes of the last decision
+          const timeDiff = Math.abs(new Date(timestamp).getTime() - new Date(lastDecisionTime).getTime());
+          if (timeDiff <= 120000) { // 2 minutes in milliseconds
+            currentContext.push(text);
+          } else {
+            // Time gap too large, save previous decision and reset
+            if (currentContext.length > 0) {
+              decisions.push({
+                content: currentContext[0],
+                context: currentContext.slice(1),
+                timestamp: lastDecisionTime
+              });
+            }
+            currentContext = [];
+            lastDecisionTime = "";
+          }
+        }
       }
-    });
+    }
+
+    // Save the last decision if we have one
+    if (currentContext.length > 0) {
+      decisions.push({
+        content: currentContext[0],
+        context: currentContext.slice(1),
+        timestamp: lastDecisionTime
+      });
+    }
   }
 
   const timezone = env.TIMEZONE || "America/Los_Angeles";
@@ -28,7 +109,7 @@ export function decisions(lifelogs: Lifelog[], env: Env) {
   now.setDate(now.getDate() - 1);
   const dateStr = now.toLocaleDateString("en-US", { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
-  if (!bullets.length) {
+  if (!decisions.length) {
     return {
       html: `
         <h2>Decisions</h2>
@@ -38,8 +119,24 @@ export function decisions(lifelogs: Lifelog[], env: Env) {
     };
   }
 
-  const listHtml = bullets.map((b) => `<li>${b}</li>`).join("\n");
-  const listText = bullets.map((b) => `- ${b}`).join("\n");
+  // Sort decisions by timestamp
+  decisions.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  const listHtml = decisions.map(d => `
+    <li>
+      <strong>${d.content}</strong>
+      ${d.context.length > 0 ? `
+        <ul>
+          ${d.context.map(c => `<li>${c}</li>`).join('\n')}
+        </ul>
+      ` : ''}
+    </li>
+  `).join('\n');
+
+  const listText = decisions.map(d => `
+- ${d.content}
+  ${d.context.map(c => `  - ${c}`).join('\n')}
+  `).join('\n');
 
   return {
     html: `
@@ -257,7 +354,13 @@ export function conversation_topics(lifelogs: Lifelog[], env: Env): { html: stri
     console.log('Contents length:', log.contents?.length);
     
     // Process content in order, maintaining hierarchy
-    const processContent = (content: LifelogContent) => {
+    const processContent = (content: { 
+      type?: string;
+      content?: string;
+      startTime?: string;
+      endTime?: string;
+      children?: any[];
+    }) => {
       console.log('Content type:', content.type);
       console.log('Content:', content.content);
       
@@ -280,7 +383,7 @@ export function conversation_topics(lifelogs: Lifelog[], env: Env): { html: stri
         }
         
         // Start tracking new topic
-        currentTopic = content.content;
+        currentTopic = content.content || "";
         topicStartTime = lastBlockquoteEndTime || log.startTime;
         console.log('New topic:', currentTopic, 'start time:', topicStartTime);
       }
