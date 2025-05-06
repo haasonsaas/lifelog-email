@@ -15,14 +15,7 @@ export interface LifelogEntry {
   title: string;
   startTime: string;
   endTime: string;
-  contents: Array<{
-    content: string;
-    type: string;
-    startTime?: string;
-    endTime?: string;
-    speakerName?: string;
-    speakerIdentifier?: string;
-  }>;
+  contents: LifelogContent[];
 }
 
 export type Lifelog = LifelogEntry & {

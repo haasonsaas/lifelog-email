@@ -1,5 +1,5 @@
 import { conversation_topics } from './extractors';
-import type { Lifelog } from './types';
+import type { Lifelog, LifelogContent } from './types';
 
 const testLifelog: Lifelog = {
   id: "test-1",
@@ -16,7 +16,7 @@ const testLifelog: Lifelog = {
       startOffsetMs: 0,
       endOffsetMs: 0,
       children: []
-    },
+    } as LifelogContent,
     {
       type: "blockquote",
       content: "Good morning! How's the coffee today?",
@@ -26,8 +26,8 @@ const testLifelog: Lifelog = {
       endOffsetMs: 330000,
       children: [],
       speakerName: "Alice",
-      speakerIdentifier: null
-    },
+      speakerIdentifier: "user"
+    } as LifelogContent,
     {
       type: "blockquote",
       content: "It's great, thanks for asking!",
@@ -37,8 +37,8 @@ const testLifelog: Lifelog = {
       endOffsetMs: 390000,
       children: [],
       speakerName: "Bob",
-      speakerIdentifier: null
-    },
+      speakerIdentifier: "user"
+    } as LifelogContent,
     {
       type: "heading2",
       content: "Project Discussion",
@@ -47,7 +47,7 @@ const testLifelog: Lifelog = {
       startOffsetMs: 900000,
       endOffsetMs: 900000,
       children: []
-    },
+    } as LifelogContent,
     {
       type: "blockquote",
       content: "Let's talk about the new project timeline",
@@ -57,8 +57,8 @@ const testLifelog: Lifelog = {
       endOffsetMs: 990000,
       children: [],
       speakerName: "Alice",
-      speakerIdentifier: null
-    },
+      speakerIdentifier: "user"
+    } as LifelogContent,
     {
       type: "blockquote",
       content: "I think we should aim for Q3 delivery",
@@ -68,8 +68,8 @@ const testLifelog: Lifelog = {
       endOffsetMs: 1050000,
       children: [],
       speakerName: "Bob",
-      speakerIdentifier: null
-    }
+      speakerIdentifier: "user"
+    } as LifelogContent
   ]
 };
 

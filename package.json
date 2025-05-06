@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "openai": "^4.96.0"
+    "openai": "^4.97.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250429.0",

@@ -210,3 +210,12 @@ export function searchLifelogs(lifelogs: LifelogEntry[], options: SearchOptions)
     return true;
   });
 }
+
+export function testDateRange(timezone: string = "America/Los_Angeles") {
+  const end = new Date("2025-05-05T23:59:59");
+  const start = new Date("2025-05-05T00:00:00");
+  return {
+    start: start.toISOString().replace('T', ' ').slice(0, 19),
+    end: end.toISOString().replace('T', ' ').slice(0, 19)
+  };
+}

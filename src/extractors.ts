@@ -14,7 +14,7 @@ type ContentNode = {
   children?: ContentNode[];
   type?: string;
   speakerName?: string;
-  speakerIdentifier?: string;
+  speakerIdentifier?: "user" | null;
 };
 
 const walk = (nodes: ContentNode[]): ContentNode[] =>
@@ -327,20 +327,22 @@ export async function gpt_summary(lifelogs: Lifelog[], env: Env): Promise<{ html
   const messages: ChatCompletionMessageParam[] = [
     {
       role: "system",
-      content: `You are an expert conversation summarizer. Create a concise daily digest that includes:
-1. A brief 2-3 sentence overview of the day's key activities
-2. Important decisions made
-3. Key action items/commitments
-4. Notable new contacts (if any)
-5. Main conversation topics with approximate time spent
+      content: `You are an expert conversation summarizer. Create a concise summary of the actual conversation content provided. Do not make up or template any information. If there is no content in a category, simply omit that section.
 
-Keep each section very brief and focus on the most important information. Format the output in a clean, scannable way.`,
+Format the output with these sections (only if there is actual content):
+1. Overview: 2-3 sentences about the main activities
+2. Decisions: List any decisions made
+3. Action Items: List any commitments or tasks
+4. New Contacts: List any new people mentioned
+5. Topics: List main topics discussed with approximate durations
+
+Keep each section brief and only include information that is explicitly present in the conversation.`,
     },
     { role: "user", content: chunks },
   ];
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gpt-4o",
     messages,
     max_tokens: 512,
     temperature: 0.3,
@@ -354,12 +356,10 @@ Keep each section very brief and focus on the most important information. Format
 
   return {
     html: `
-      <p>Good morning Jonathan,</p>
-      <p>Here's your daily digest for <strong>${dateStr}</strong>:</p>
+      <h2>Daily Summary</h2>
       <div style="white-space: pre-wrap; font-family: monospace; line-height: 1.5;">${summary}</div>
-      <p>Stay informed,<br>Your Limitless Digest 🪄</p>
     `,
-    text: `Good morning Jonathan,\n\nHere's your daily digest for ${dateStr}:\n\n${summary}\n\nStay informed,\nYour Limitless Digest 🪄`
+    text: `Daily Summary\n\n${summary}`
   };
 }
 
