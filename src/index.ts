@@ -46,7 +46,9 @@ export default {
 
     if (path === "/preview") {
       const { start, end } = testDateRange(env.TIMEZONE);
+      console.log('Fetching lifelogs for date range:', { start, end });
       const lifelogs = await fetchLifelogs(env.LIMITLESS_API_KEY, start, end);
+      console.log('Received lifelogs:', lifelogs.length);
       const logsWithMarkdown: Lifelog[] = lifelogs.map(log => ({
         ...log,
         contents: log.contents.map(content => ({
@@ -56,6 +58,7 @@ export default {
         })),
         markdown: formatLifelogEntry(log)
       }));
+      console.log('Processed logs with markdown:', logsWithMarkdown.length);
       const result = await gpt_summary(logsWithMarkdown, env);
       return new Response(result.html, { headers: { "Content-Type": "text/html" } });
     }

@@ -60,6 +60,7 @@ export async function fetchLifelogs(
   }
 
   console.log('Fetching lifelogs from:', url.toString());
+  console.log('Using API key:', apiKey ? 'Present' : 'Missing');
 
   let retries = 0;
   while (retries < MAX_RETRIES) {
@@ -71,8 +72,19 @@ export async function fetchLifelogs(
         }
       });
 
+      console.log('API Response status:', response.status);
+      
       if (!response.ok) {
-        const errorData = await response.json() as ApiError;
+        const errorText = await response.text();
+        console.error('API Error response:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText) as ApiError;
+        } catch (e) {
+          console.error('Failed to parse error response as JSON:', e);
+          throw new Error(`API Error: ${response.status} - ${errorText}`);
+        }
+        
         if (response.status === 429) {
           // Rate limit exceeded
           const retryAfter = response.headers.get('Retry-After');
@@ -82,20 +94,32 @@ export async function fetchLifelogs(
           retries++;
           continue;
         }
-        throw new Error(`API Error: ${errorData.error.message} (${errorData.error.code})`);
+        throw new Error(`API Error: ${errorData.error?.message || errorText} (${errorData.error?.code || response.status})`);
       }
 
-      const data = await response.json() as LifelogsResponse;
-      console.log('Received lifelogs:', data.data.lifelogs.length);
+      const responseText = await response.text();
+      console.log('Raw API response:', responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText) as LifelogsResponse;
+      } catch (e) {
+        console.error('Failed to parse response as JSON:', e);
+        throw new Error('Failed to parse API response as JSON');
+      }
+      
+      console.log('Received lifelogs:', data.data?.lifelogs?.length || 0);
+      console.log('Response metadata:', data.meta);
 
       // If there are more pages and we haven't hit the limit, fetch them
-      if (data.meta.lifelogs.nextCursor && data.data.lifelogs.length < 100) {
+      if (data.meta?.lifelogs?.nextCursor && data.data?.lifelogs?.length < 100) {
         const nextPage = await fetchLifelogs(apiKey, startDate, endDate, data.meta.lifelogs.nextCursor);
-        return [...data.data.lifelogs, ...nextPage];
+        return [...(data.data?.lifelogs || []), ...nextPage];
       }
 
-      return data.data.lifelogs;
+      return data.data?.lifelogs || [];
     } catch (error) {
+      console.error('Request failed:', error);
       if (retries === MAX_RETRIES - 1) {
         throw error;
       }
@@ -212,8 +236,12 @@ export function searchLifelogs(lifelogs: LifelogEntry[], options: SearchOptions)
 }
 
 export function testDateRange(timezone: string = "America/Los_Angeles") {
-  const end = new Date("2025-05-05T23:59:59");
-  const start = new Date("2025-05-05T00:00:00");
+  const now = new Date();
+  // Set to start of yesterday (midnight)
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
+  // Set to start of yesterday
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+  
   return {
     start: start.toISOString().replace('T', ' ').slice(0, 19),
     end: end.toISOString().replace('T', ' ').slice(0, 19)
