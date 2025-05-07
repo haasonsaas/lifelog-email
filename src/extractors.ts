@@ -354,16 +354,15 @@ ${log.content.map(c => `${c.speaker}: ${c.content}`).join('\n')}
       content: `You are an expert conversation summarizer. Create a concise summary of the actual conversation content provided. Do not make up or template any information. If there is no content in a category, simply omit that section.
 
 Format the output with these sections (only if there is actual content):
-1. Overview: 2-3 sentences about the main activities across all conversations
-2. Decisions: List any decisions made, grouped by conversation
-3. Action Items: List any commitments or tasks, grouped by conversation
-4. New Contacts: List any new people mentioned
-5. Topics: List main topics discussed with approximate durations, grouped by conversation
-6. Filler words: List filler words used and their approximate duration
-7. Summary: A concise summary of each conversation
-8. Key takeaways: List key takeaways from each conversation
+1. Overview: 2-3 sentences about the main activities and outcomes across all conversations
+2. Action Items & Follow-ups: List any commitments, tasks, or required follow-ups, grouped by conversation and priority
+3. Key Decisions: List any decisions made that impact future work or require attention
+4. Important Deadlines: Extract and highlight any mentioned deadlines or time-sensitive items
+5. People & Relationships: List new contacts and notable interactions that should be followed up on
+6. Discussion Topics: List main topics with their approximate durations, highlighting which ones might need more attention in future
+7. Personal Notes: Highlight opportunities for improvement in communication (e.g., filler word usage) and any feedback received
 
-Keep each section brief and only include information that is explicitly present in the conversations. When grouping by conversation, use the conversation titles as headers.`,
+Keep each section brief and only include information that is explicitly present in the conversations. When grouping by conversation, use the conversation titles as headers. Focus on actionable insights and items requiring attention or follow-up.`,
     },
     { role: "user", content: formattedContent },
   ];
