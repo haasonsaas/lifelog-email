@@ -362,19 +362,24 @@ Summarize the *actual* conversation content passed in \`formattedContent\`.
 OUTPUT  
 Return Markdown with the following **headings** *(only when they contain content)*:
 
-1. **Overview** – 2-3 sentences on the main activities & outcomes across all conversations.  
-2. **Action Items & Follow-ups** – bullet list, grouped by **Conversation Title → Priority (high → low)**.  
-3. **Key Decisions** – bullet list of decisions affecting future work.  
-4. **Important Deadlines** – bullet list "Task – Due Date (source line)".  
-5. **People & Relationships** – new contacts or interactions that need follow-up.  
-6. **Discussion Topics** – "Topic Name (HH:MM – HH:MM, Duration)".  
-7. **Personal Notes** – communication hygiene, feedback, or improvement tips.
+1. **Overview** – 2-3 sentences, outcomes-first. Focus on what changed and what's next. No filler.
+
+2. **Action Items & Deadlines** – Table format:
+   | Owner | Task | Due | Status |
+   |-------|------|-----|--------|
+   Use parallel formatting for tasks (all start with same verb tense).
+
+3. **Key Decisions** – Bullet list of decisions that affect future work. Start with outcomes.
+
+4. **Discussion Log** – "Topic Name (HH:MM – HH:MM, Duration)".
 
 FORMAT RULES  
 • Use exact wording or tight paraphrases from the transcript.  
-• Use 24-hour times and user's local zone if times are given; otherwise leave times as written.  
+• Use 24-hour times and user's local zone if times are given.  
 • Do **not** exceed 120 total words per section.  
-• Do **not** nest bullets.`,
+• Do **not** include meta-feedback or coaching notes.  
+• Every action item must have an owner and date.  
+• Use parallel formatting for all bullet points.`,
     },
     { role: "user", content: formattedContent },
   ];
