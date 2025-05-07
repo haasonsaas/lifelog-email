@@ -5,7 +5,7 @@ A Cloudflare Worker that processes Limitless lifelogs and sends daily digests vi
 ## Features
 
 - **Daily Email Digests**: Automatically sends a summary of your day's conversations
-- **Multiple Extractors**: Choose from different analysis methods
+- **AI-Powered Analysis**: Uses OpenAI to generate comprehensive summaries
 - **Search Functionality**: Search through your lifelogs by query, speakers, topics, and date ranges
 - **Preview Mode**: Test your digest configuration before deployment
 - **Customizable Scheduling**: Configure your preferred timezone and schedule
@@ -13,12 +13,11 @@ A Cloudflare Worker that processes Limitless lifelogs and sends daily digests vi
 ## Components
 
 ### Extractors
-- `decisions`: Extracts explicit decision statements with context
-- `new_contacts`: Tracks unique speakers across conversations (requires KV)
-- `filler_score`: Analyzes filler word frequency and speech patterns
-- `action_items`: Extracts commitments and tasks
 - `gpt_summary`: Generates AI-powered summaries using OpenAI API
-- `conversation_topics`: Analyzes and categorizes conversation topics with duration tracking
+  - Overview of key points
+  - Action items and deadlines
+  - Key decisions
+  - Discussion topics with durations
 
 ### Search Capabilities
 - Full-text search across all conversations
@@ -62,7 +61,7 @@ The service supports multiple environments:
 - **Production**: Accessible at digest.haasonsaas.com
 
 ### KV Storage
-Required for `new_contacts` extractor:
+Required for persistent storage:
 ```bash
 wrangler kv:namespace create TOKEN_KV
 ```
@@ -72,7 +71,7 @@ wrangler kv:namespace create TOKEN_KV
 [vars]
 FROM_EMAIL = "sender@domain.com"    # Verified Resend sender
 TO_EMAIL = "recipient@domain.com"   # Recipient address
-EXTRACTOR = "decisions"            # Selected extractor
+EXTRACTOR = "gpt_summary"          # Selected extractor
 TIMEZONE = "America/Los_Angeles"   # IANA timezone
 ```
 
@@ -94,29 +93,6 @@ wrangler deploy
 
 ## Extractors
 
-### decisions
-- Pattern matching for "I decided" or "we decided" statements
-- Includes surrounding context for better understanding
-- Returns chronological list of decisions with timestamps
-
-### new_contacts
-- Tracks unique speakers across conversations
-- Uses KV storage for persistence
-- Returns new contacts for the day
-- Excludes the user from tracking
-
-### filler_score
-- Analyzes frequency of filler words (um, uh, like, etc.)
-- Calculates usage rate per conversation
-- Returns statistics and trends
-- Focuses on user's speech patterns
-
-### action_items
-- Pattern matching for commitment phrases
-- Identifies tasks and commitments
-- Returns chronological list with context
-- Helps track follow-up items
-
 ### gpt_summary
 - Uses OpenAI API for conversation analysis
 - Generates concise summaries with sections:
@@ -126,12 +102,6 @@ wrangler deploy
   - New Contacts
   - Topics with durations
 - Requires OpenAI API key
-
-### conversation_topics
-- Analyzes conversation content for topic detection
-- Tracks duration spent on each topic
-- Sorts topics by time spent
-- Provides daily topic distribution
 
 ## License
 

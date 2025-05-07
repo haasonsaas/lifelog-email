@@ -7,7 +7,7 @@ crons = ["0 16 * * *"]  # 09:00 America/Los_Angeles
 
 [vars]
 TIMEZONE   = "America/Los_Angeles"
-EXTRACTOR  = "conversation_topics"   # decisions | new_contacts | filler_score | action_items | gpt_summary | conversation_topics
+EXTRACTOR  = "gpt_summary"
 FROM_EMAIL = "your-from-email@example.com"
 TO_EMAIL   = "your-to-email@example.com"
 
@@ -18,7 +18,7 @@ preview_id = "your-preview-kv-namespace-id"
 
 [env.dev]
 name = "day-after-worker-resend-dev"
-vars = { TIMEZONE = "America/Los_Angeles", EXTRACTOR = "conversation_topics", FROM_EMAIL = "your-from-email@example.com", TO_EMAIL = "your-to-email@example.com" }
+vars = { TIMEZONE = "America/Los_Angeles", EXTRACTOR = "gpt_summary", FROM_EMAIL = "your-from-email@example.com", TO_EMAIL = "your-to-email@example.com" }
 
 [[env.dev.kv_namespaces]]
 binding = "TOKEN_KV"
