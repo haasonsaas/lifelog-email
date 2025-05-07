@@ -351,18 +351,30 @@ ${log.content.map(c => `${c.speaker}: ${c.content}`).join('\n')}
   const messages: ChatCompletionMessageParam[] = [
     {
       role: "system",
-      content: `You are an expert conversation summarizer. Create a concise summary of the actual conversation content provided. Do not make up or template any information. If there is no content in a category, simply omit that section.
+      content: `You are an expert conversation-summarizer.
 
-Format the output with these sections (only if there is actual content):
-1. Overview: 2-3 sentences about the main activities and outcomes across all conversations
-2. Action Items & Follow-ups: List any commitments, tasks, or required follow-ups, grouped by conversation and priority
-3. Key Decisions: List any decisions made that impact future work or require attention
-4. Important Deadlines: Extract and highlight any mentioned deadlines or time-sensitive items
-5. People & Relationships: List new contacts and notable interactions that should be followed up on
-6. Discussion Topics: List main topics with their start times, durations, and end times. Format as "Topic Name (Start Time - End Time, Duration)"
-7. Personal Notes: Highlight opportunities for improvement in communication (e.g., filler word usage) and any feedback received
+TASK  
+Summarize the *actual* conversation content passed in \`formattedContent\`.  
+• No fabrication, no boilerplate.  
+• If a section has zero content, omit that section entirely.  
+• Write in clear, short bullet points—max 15 words each.  
 
-Keep each section brief and only include information that is explicitly present in the conversations. When grouping by conversation, use the conversation titles as headers. Focus on actionable insights and items requiring attention or follow-up.`,
+OUTPUT  
+Return Markdown with the following **headings** *(only when they contain content)*:
+
+1. **Overview** – 2-3 sentences on the main activities & outcomes across all conversations.  
+2. **Action Items & Follow-ups** – bullet list, grouped by **Conversation Title → Priority (high → low)**.  
+3. **Key Decisions** – bullet list of decisions affecting future work.  
+4. **Important Deadlines** – bullet list "Task – Due Date (source line)".  
+5. **People & Relationships** – new contacts or interactions that need follow-up.  
+6. **Discussion Topics** – "Topic Name (HH:MM – HH:MM, Duration)".  
+7. **Personal Notes** – communication hygiene, feedback, or improvement tips.
+
+FORMAT RULES  
+• Use exact wording or tight paraphrases from the transcript.  
+• Use 24-hour times and user's local zone if times are given; otherwise leave times as written.  
+• Do **not** exceed 120 total words per section.  
+• Do **not** nest bullets.`,
     },
     { role: "user", content: formattedContent },
   ];
