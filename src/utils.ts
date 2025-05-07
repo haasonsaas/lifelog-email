@@ -1,10 +1,15 @@
 import type { Env } from "./types";
 
 export function yesterday(tz: string) {
-  const now = new Date();
-  const utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const start = new Date(utcMidnight - 86_400_000);
-  const end = new Date(utcMidnight - 1);
+  // Create a date in the specified timezone
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: tz }));
+  
+  // Set to start of yesterday (midnight)
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+  // Set to end of yesterday (23:59:59)
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
+  
+  // Convert to ISO string and format
   const iso = (d: Date) => d.toISOString().replace("T", " ").slice(0, 19);
   return { start: iso(start), end: iso(end) };
 }
@@ -59,8 +64,12 @@ export async function fetchLifelogs(
     url.searchParams.append('cursor', cursor);
   }
 
-  console.log('Fetching lifelogs from:', url.toString());
-  console.log('Using API key:', apiKey ? 'Present' : 'Missing');
+  console.log('Fetching lifelogs with parameters:');
+  console.log('- Start date:', start);
+  console.log('- End date:', end);
+  console.log('- Timezone:', 'America/Los_Angeles');
+  console.log('- URL:', url.toString());
+  console.log('- API Key present:', apiKey ? 'Yes' : 'No');
 
   let retries = 0;
   while (retries < MAX_RETRIES) {
@@ -73,6 +82,11 @@ export async function fetchLifelogs(
       });
 
       console.log('API Response status:', response.status);
+      console.log('API Response headers:', {
+        'content-type': response.headers.get('content-type'),
+        'date': response.headers.get('date'),
+        'server': response.headers.get('server')
+      });
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -236,11 +250,10 @@ export function searchLifelogs(lifelogs: LifelogEntry[], options: SearchOptions)
 }
 
 export function testDateRange(timezone: string = "America/Los_Angeles") {
-  const now = new Date();
-  // Set to start of yesterday (midnight)
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
-  // Set to start of yesterday
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+  // Use a much wider date range for testing (last 30 days)
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 30); // Look back 30 days
   
   return {
     start: start.toISOString().replace('T', ' ').slice(0, 19),
