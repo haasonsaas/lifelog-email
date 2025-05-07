@@ -28,7 +28,7 @@ A Cloudflare Worker that processes Limitless lifelogs and sends daily digests vi
 - Combined search criteria
 
 ### Scheduling
-- Runs daily at 9:00 AM in configured timezone
+- Runs daily at 8:00 AM Pacific time (15:00 UTC)
 - Customizable via wrangler.toml
 
 ### Preview
@@ -48,12 +48,18 @@ npm install
 
 ### Required Environment Variables
 ```bash
-# API Keys
+# API Keys (DO NOT commit these to version control)
 wrangler secret put LIMITLESS_API_KEY
 wrangler secret put RESEND_API_KEY
 # For gpt_summary extractor:
 wrangler secret put OPENAI_API_KEY
 ```
+
+### Environments
+The service supports multiple environments:
+- **Development**: Local testing with `wrangler dev`
+- **Staging**: Accessible at digest-staging.haasonsaas.com
+- **Production**: Accessible at digest.haasonsaas.com
 
 ### KV Storage
 Required for `new_contacts` extractor:

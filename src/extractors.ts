@@ -316,13 +316,37 @@ export function action_items(lifelogs: Lifelog[], env: Env): { html: string; tex
 export async function gpt_summary(lifelogs: Lifelog[], env: Env): Promise<{ html: string; text: string }> {
   const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
-  // Get all the content for GPT to analyze
-  const chunks = lifelogs
-    .flatMap((l) => l.contents || [])
-    .filter((n) => n.content)
-    .map((n) => n.content)
-    .join("\n")
-    .slice(0, 12_000); // keep token budget sane
+  // Process each lifelog separately to maintain conversation boundaries
+  const processedLogs = lifelogs.map(log => {
+    const content = walk(log.contents || [])
+      .filter(n => n.content)
+      .map(n => ({
+        content: n.content,
+        startTime: n.startTime || log.startTime,
+        endTime: n.endTime || log.endTime,
+        speaker: n.speakerName || 'Unknown'
+      }))
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+    return {
+      title: log.title,
+      startTime: log.startTime,
+      endTime: log.endTime,
+      content
+    };
+  });
+
+  // Format the content for GPT with clear conversation boundaries
+  const formattedContent = processedLogs.map(log => {
+    const duration = Math.round((new Date(log.endTime).getTime() - new Date(log.startTime).getTime()) / 1000 / 60);
+    return `Conversation: ${log.title} (${duration} minutes)
+Start: ${new Date(log.startTime).toLocaleTimeString()}
+End: ${new Date(log.endTime).toLocaleTimeString()}
+
+${log.content.map(c => `${c.speaker}: ${c.content}`).join('\n')}
+
+---`;
+  }).join('\n\n').slice(0, 12_000);
 
   const messages: ChatCompletionMessageParam[] = [
     {
@@ -330,15 +354,18 @@ export async function gpt_summary(lifelogs: Lifelog[], env: Env): Promise<{ html
       content: `You are an expert conversation summarizer. Create a concise summary of the actual conversation content provided. Do not make up or template any information. If there is no content in a category, simply omit that section.
 
 Format the output with these sections (only if there is actual content):
-1. Overview: 2-3 sentences about the main activities
-2. Decisions: List any decisions made
-3. Action Items: List any commitments or tasks
+1. Overview: 2-3 sentences about the main activities across all conversations
+2. Decisions: List any decisions made, grouped by conversation
+3. Action Items: List any commitments or tasks, grouped by conversation
 4. New Contacts: List any new people mentioned
-5. Topics: List main topics discussed with approximate durations
+5. Topics: List main topics discussed with approximate durations, grouped by conversation
+6. Filler words: List filler words used and their approximate duration
+7. Summary: A concise summary of each conversation
+8. Key takeaways: List key takeaways from each conversation
 
-Keep each section brief and only include information that is explicitly present in the conversation.`,
+Keep each section brief and only include information that is explicitly present in the conversations. When grouping by conversation, use the conversation titles as headers.`,
     },
-    { role: "user", content: chunks },
+    { role: "user", content: formattedContent },
   ];
 
   const response = await openai.chat.completions.create({
