@@ -1,17 +1,31 @@
 import type { Env } from "./types";
 
 export function yesterday(tz: string) {
-  // Create a date in the specified timezone
-  const now = new Date(new Date().toLocaleString("en-US", { timeZone: tz }));
+  // Get current time in the target timezone
+  const tzOptions = { timeZone: tz, hour12: false };
+  const now = new Date();
   
-  // Set to start of yesterday (midnight)
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
-  // Set to end of yesterday (23:59:59)
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
+  // Get the date components in the target timezone
+  const [month, day, year] = new Date(now.toLocaleString('en-US', tzOptions))
+    .toLocaleDateString('en-US')
+    .split('/');
   
-  // Convert to ISO string and format
-  const iso = (d: Date) => d.toISOString().replace("T", " ").slice(0, 19);
-  return { start: iso(start), end: iso(end) };
+  // Create start and end dates for yesterday in target timezone
+  const yesterdayStart = new Date(Number(year), Number(month) - 1, Number(day) - 1);
+  const yesterdayEnd = new Date(Number(year), Number(month) - 1, Number(day) - 1, 23, 59, 59);
+  
+  console.log('Date calculations:', {
+    timezone: tz,
+    currentTimeInTZ: now.toLocaleString('en-US', tzOptions),
+    yesterdayStartInTZ: yesterdayStart.toLocaleString('en-US', tzOptions),
+    yesterdayEndInTZ: yesterdayEnd.toLocaleString('en-US', tzOptions)
+  });
+  
+  // Format dates as required by the API
+  return {
+    start: yesterdayStart.toISOString().replace('T', ' ').slice(0, 19),
+    end: yesterdayEnd.toISOString().replace('T', ' ').slice(0, 19)
+  };
 }
 
 interface LifelogsResponse {
@@ -48,12 +62,9 @@ export async function fetchLifelogs(
 ): Promise<LifelogEntry[]> {
   const url = new URL('https://api.limitless.ai/v1/lifelogs');
   
-  // Convert dates to YYYY-MM-DD format if they include time
-  const start = startDate.split(' ')[0];
-  const end = endDate.split(' ')[0];
-  
-  url.searchParams.append('start', start);
-  url.searchParams.append('end', end);
+  // Use full timestamps
+  url.searchParams.append('start', startDate);
+  url.searchParams.append('end', endDate);
   url.searchParams.append('timezone', 'America/Los_Angeles');
   url.searchParams.append('includeMarkdown', 'true');
   url.searchParams.append('includeHeadings', 'true');
@@ -65,8 +76,8 @@ export async function fetchLifelogs(
   }
 
   console.log('Fetching lifelogs with parameters:');
-  console.log('- Start date:', start);
-  console.log('- End date:', end);
+  console.log('- Start date:', startDate);
+  console.log('- End date:', endDate);
   console.log('- Timezone:', 'America/Los_Angeles');
   console.log('- URL:', url.toString());
   console.log('- API Key present:', apiKey ? 'Yes' : 'No');
@@ -250,10 +261,20 @@ export function searchLifelogs(lifelogs: LifelogEntry[], options: SearchOptions)
 }
 
 export function testDateRange(timezone: string = "America/Los_Angeles") {
-  // Use a much wider date range for testing (last 30 days)
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - 30); // Look back 30 days
+  // Create a date in the specified timezone
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
+  
+  // Set to start of yesterday (midnight)
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
+  // Set to end of yesterday (23:59:59)
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59);
+  
+  console.log('Test date range:', {
+    timezone,
+    now: now.toISOString(),
+    start: start.toISOString(),
+    end: end.toISOString()
+  });
   
   return {
     start: start.toISOString().replace('T', ' ').slice(0, 19),
