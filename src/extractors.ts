@@ -359,7 +359,7 @@ Format the output with these sections (only if there is actual content):
 3. Key Decisions: List any decisions made that impact future work or require attention
 4. Important Deadlines: Extract and highlight any mentioned deadlines or time-sensitive items
 5. People & Relationships: List new contacts and notable interactions that should be followed up on
-6. Discussion Topics: List main topics with their approximate durations, highlighting which ones might need more attention in future
+6. Discussion Topics: List main topics with their start times, durations, and end times. Format as "Topic Name (Start Time - End Time, Duration)"
 7. Personal Notes: Highlight opportunities for improvement in communication (e.g., filler word usage) and any feedback received
 
 Keep each section brief and only include information that is explicitly present in the conversations. When grouping by conversation, use the conversation titles as headers. Focus on actionable insights and items requiring attention or follow-up.`,
