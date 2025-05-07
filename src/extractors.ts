@@ -367,7 +367,10 @@ Return Markdown with the following **headings** *(only when they contain content
 2. **Action Items & Deadlines** – Table format:
    | Owner | Task | Due | Status |
    |-------|------|-----|--------|
-   Use parallel formatting for tasks (all start with same verb tense).
+   • Only include due dates that are explicitly mentioned in the conversation
+   • If no due date is mentioned, leave the Due column empty
+   • Use parallel formatting for tasks (all start with same verb tense)
+   • Never infer or guess due dates
 
 3. **Key Decisions** – Bullet list of decisions that affect future work. Start with outcomes.
 
@@ -378,7 +381,7 @@ FORMAT RULES
 • Use 24-hour times and user's local zone if times are given.  
 • Do **not** exceed 120 total words per section.  
 • Do **not** include meta-feedback or coaching notes.  
-• Every action item must have an owner and date.  
+• Every action item must have an owner
 • Use parallel formatting for all bullet points.`,
     },
     { role: "user", content: formattedContent },
