@@ -32,4 +32,15 @@ export type LifelogContent = {
   children?: LifelogContent[];
   speakerName?: string;
   speakerIdentifier?: "user" | null;
-}; 
+};
+
+export interface ActionItem {
+  id: string;
+  task: string;
+  owner: string;
+  dueDate?: string;
+  priority: "high" | "medium" | "low";
+  status: "new" | "in_progress" | "completed" | "cancelled";
+  context?: string;
+  timestamp: string;
+} 
